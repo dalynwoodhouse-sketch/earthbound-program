@@ -57,6 +57,7 @@ h1 { font-family: var(--f-title); font-weight: 400; font-size: var(--s-5); line-
             min-width: 2.6rem; padding: .35rem .7rem; border: 1px solid var(--moss); border-radius: 2px; text-align: center; }
 .switch a[aria-current="true"] { color: var(--night); background: var(--moon); border-color: var(--moon); }
 .switch a:focus-visible, nav a:focus-visible { outline: 2px solid var(--kelpie); outline-offset: 2px; }
+.switch a small { display: block; font-family: var(--f-body); font-size: .72rem; letter-spacing: 0; opacity: .85; }
 .switch .sep { width: 1px; background: var(--moss); margin-inline: .3rem; }
 .switch-label { text-align: center; font-size: var(--s-0); color: var(--lichen); letter-spacing: .08em; font-family: var(--f-head); }
 
@@ -144,7 +145,7 @@ html { scroll-behavior: smooth; }
   </div>
 
   <div id="program" hidden>
-    <div class="switch-label">VIEWING A DIFFERENT PERFORMANCE?</div>
+    <div class="switch-label">CHOOSE YOUR PERFORMANCE</div>
     <div class="switch" id="switch"></div>
     <nav class="jump" aria-label="Program sections">
       <a href="#story" data-sec="story">Story</a>
@@ -253,7 +254,9 @@ function show(c) {
   const sw = $("switch"); sw.replaceChildren();
   ORDER.forEach((k, i) => {
     if (i === 4) sw.append(el("span", "sep"));
-    const a = el("a", null, k); a.href = "#cast-" + k.toLowerCase();
+    const a = el("a", null, "Cast " + k); a.href = "#cast-" + k.toLowerCase();
+    const w = DATA.casts[k].when.split(" · ");
+    a.append(el("small", null, w[0].slice(0, 3) + " " + (w[1] || "")));
     a.setAttribute("aria-current", k === c ? "true" : "false");
     a.title = DATA.casts[k].when;
     a.addEventListener("click", e => { e.preventDefault(); show(k); window.scrollTo({top: 0}); });
@@ -290,9 +293,17 @@ function show(c) {
     p.append(row);
   });
 }
+/* With no cast in the link, open the performance that is on now or up next. */
+const STARTS = {E: "2026-11-27T16:30:00-07:00", F: "2026-11-27T19:30:00-07:00", A: "2026-11-28T10:00:00-07:00",
+                B: "2026-11-28T13:00:00-07:00", C: "2026-11-28T16:00:00-07:00", D: "2026-11-28T19:00:00-07:00"};
+function defaultCast() {
+  const now = Date.now(), byTime = Object.keys(STARTS).sort((x, y) => Date.parse(STARTS[x]) - Date.parse(STARTS[y]));
+  for (const k of byTime) if (Date.parse(STARTS[k]) + 90 * 60000 > now) return k;
+  return byTime[byTime.length - 1];
+}
 function route() {
   const c = tokenToCast(location.hash.slice(1));
-  if (c && DATA.casts[c]) show(c); else renderPicker();
+  show(c && DATA.casts[c] ? c : defaultCast());
 }
 document.querySelectorAll("nav.jump a").forEach(a => a.addEventListener("click", e => {
   e.preventDefault(); const t = $(a.dataset.sec); if (t) t.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
